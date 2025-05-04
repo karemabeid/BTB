@@ -1,0 +1,60 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"jsonFile" : "directory-.-Debug-d0094a50bb2071803777.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.27"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "CompArch_hw1",
+					"targetIndexes" : 
+					[
+						0
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "CompArch_hw1::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-CompArch_hw1-Debug-e18f22306716c81131b7.json",
+					"name" : "CompArch_hw1",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/Users/karim/OneDrive/Desktop/semester 6/Computer Architecture/Computer Architecture HW/BTB/CompArch-hw1/cmake-build-debug",
+		"source" : "C:/Users/karim/OneDrive/Desktop/semester 6/Computer Architecture/Computer Architecture HW/BTB/CompArch-hw1"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 6
+	}
+}

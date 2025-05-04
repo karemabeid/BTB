@@ -17,13 +17,7 @@ typedef struct {
 	unsigned br_num;      	      // Number of branch instructions
 	unsigned size;		      // Theoretical allocated BTB and branch predictor size
 } SIM_stats;
-typedef enum{
-    WNT = 1 ,SNT = 0 , WT = 2 , ST = 3
-} StateOfFSM;
 
-typedef enum {
-    noShare = 0, lsbShare = 1, midShare = 2
-} Share;
 
 /*************************************************************************/
 /* The following functions should be implemented in your bp.c (or .cpp) */

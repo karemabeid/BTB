@@ -3,6 +3,7 @@
 #include <vector>
 #include <cmath>
 #include "bp_api.h"
+
 typedef enum{
     WNT = 1 ,SNT = 0 , WT = 2 , ST = 3
 } StateOfFSM;
@@ -22,7 +23,7 @@ uint32_t calcEntry(uint32_t pc, int size){
     return (pc >> 2) % (size);
 }
 uint32_t calcTag(uint32_t pc, int btbSize, int tagSize){
-    return ((pc>>2) / (btbSize)) % PowerOfTwo(tagSize)
+    return ((pc>>2) / (btbSize)) % PowerOfTwo(tagSize);
 }
 int lsbShareHelper(uint32_t pc, int size){
     return (pc >> 2) % PowerOfTwo(size);
@@ -46,13 +47,13 @@ private:
     BranchPredictor();
 
 public:
-    vector <uint32_t> tags; //for tags when using local history
-    vector <uint32_t> targetPCs;
-    vector <uint32_t> localHistories; // history for each tag when using local history
-    vector <vector<StateOfFSM>> localFSMs; // state machine for each tag when using local history
-    vector <StateOfFSM> GlobalFSM;//
-    vector<bool> isABTBEntry;
-    SIM_stats simStats
+    std::vector<uint32_t> tags; //for tags when using local history
+    std::vector<uint32_t> targetPCs;
+    std::vector <uint32_t> localHistories; // history for each tag when using local history
+    std::vector <std::vector<StateOfFSM>> localFSMs; // state machine for each tag when using local history
+    std::vector <StateOfFSM> GlobalFSM;//
+    std::vector<bool> isABTBEntry;
+    SIM_stats simStats;
 
     BranchPredictor(BranchPredictor const &) = delete; // disable copy ctor
     void operator=(BranchPredictor const &) = delete; // disable = operator
@@ -97,25 +98,25 @@ public:
         return shareType;
     }
     void setShareType(int type){
-        shareType = type;
+        shareType = (Share)type;
     }
     StateOfFSM getInitialFsmState() {
         return initialFsmState;
     }
     void setInitialFsmState(int state) {
-        initialFsmState = state;
+        initialFsmState = (StateOfFSM)state;
     }
     uint32_t getGlobalHistoryVec() {
-        return globalHistoryVec
+        return globalHistoryVec;
     }
     void setGlobalHistoryVec(uint32_t vec){
         globalHistoryVec = vec;
     }
     StateOfFSM getGlobalHistoryVecState(){
-        retrun globalHistoryVecState;
+        return globalHistoryVecState;
     }
     void setGlobalHistoryVecState(int state){
-        globalHistoryVecState = state;
+        globalHistoryVecState = (StateOfFSM)state;
     }
 ////////////// end of setters getters //////////////
 };
@@ -134,22 +135,22 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned f
     branchPredictor.setHistoryType(isGlobalHist);
     branchPredictor.setTablesType(isGlobalTable);
     branchPredictor.setShareType(Share(Shared));
-    branchPredictor.tags = vector<uint32_t>(btbSize, 0);
-    branchPredictor.targets = vector<uint32_t>(btbSize, 0);
+    branchPredictor.tags = std::vector<uint32_t>(btbSize, 0);
+    branchPredictor.targetPCs = std::vector<uint32_t>(btbSize, 0);
     branchPredictor.simStats = {0, 0, 0};
-    branchPredictor.isABTBEntry = vector<bool>(btbSize, false);
+    branchPredictor.isABTBEntry = std::vector<bool>(btbSize, false);
 
     if (isGlobalTable) {
-        branchPredictor.GlobalFSM = vector<StateOfFSM>(PowerOfTwo(historySize), (StateOfFSM)fsmState);
+        branchPredictor.GlobalFSM = std::vector<StateOfFSM>(PowerOfTwo(historySize), (StateOfFSM)fsmState);
         // it is a Global table
     } else {
-        branchPredictor.localFSMs = vector <vector<StateOfFSM>>(btbSize, vector<StateOfFSM>(PowerOfTwo(historySize), (StateOfFSM)fsmState));
+        branchPredictor.localFSMs = std::vector <std::vector<StateOfFSM>>(btbSize, std::vector<StateOfFSM>(PowerOfTwo(historySize), (StateOfFSM)fsmState));
         // each Entry has its own table
     }
     if (isGlobalHist){
         branchPredictor.setGlobalHistoryVec(0);
     } else {
-        branchPredictor.localHistories = vector<uint32_t>(btbSize, 0);
+        branchPredictor.localHistories = std::vector<uint32_t>(btbSize, 0);
     }
     return 0;
 }
@@ -182,14 +183,14 @@ bool BP_predict(uint32_t pc, uint32_t *dst){
     if(branchPredictor.isGlobalHistory() && !(branchPredictor.isGlobalTable())
         && (branchPredictor.localFSMs[entry][branchPredictor.getGlobalHistoryVec()] == ST
         || branchPredictor.localFSMs[entry][branchPredictor.getGlobalHistoryVec()] == WT)){
-            *dst = branchPredictor.m_target[pcCorrected];
+            *dst = branchPredictor.targetPCs[entry];
             return true;
         }
     // local history vector and local tables
     if(!branchPredictor.isGlobalHistory() && !(branchPredictor.isGlobalTable())
        && (branchPredictor.localFSMs[entry][branchPredictor.localHistories[entry]] == ST
            || branchPredictor.localFSMs[entry][branchPredictor.localHistories[entry]] == WT)){
-        *dst = branchPredictor.m_target[pcCorrected];
+        *dst = branchPredictor.targetPCs[entry];
         return true;
     }
     // local history vector and a global table
@@ -203,7 +204,7 @@ bool BP_predict(uint32_t pc, uint32_t *dst){
         }
         if (branchPredictor.GlobalFSM[sharerHelper ^ branchPredictor.localHistories[entry]] == ST
         || branchPredictor.GlobalFSM[sharerHelper ^ branchPredictor.localHistories[entry]] == WT) {
-            *dst = branchPredictor.m_target[pcCorrected];
+            *dst = branchPredictor.targetPCs[entry];
             return true;
         }
     }
@@ -247,15 +248,15 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
                     ? SNT :(StateOfFSM)(((int)branchPredictor.GlobalFSM[sharerHelper ^ branchPredictor.getGlobalHistoryVec()])-1);}
 
         // shift left the history vector
-        branchPredictor.setGlobalHistoryVec(branchPredictor.getGlobalHistoryVec() << 1) % PowerOfTwo(branchPredictor.getHistVecSize());
+        branchPredictor.setGlobalHistoryVec((branchPredictor.getGlobalHistoryVec() << 1) % PowerOfTwo(branchPredictor.getHistVecSize()));
         // if taken , insert 1 from the right
-        if (taken) branchPredictor.setGlobalHistoryVec(branchPredictor.getGlobalHistoryVec()++);
+        if (taken) branchPredictor.setGlobalHistoryVec(branchPredictor.getGlobalHistoryVec()+1);
     }
     // global history vector and local tables
     if(branchPredictor.isGlobalHistory() && !(branchPredictor.isGlobalTable())){
         if (tag != branchPredictor.tags[entry]){
             branchPredictor.tags[entry] = tag;
-            branchPredictor.localFSMs[entry] = vector<StateOfFSM>(PowerOfTwo(branchPredictor.getHistVecSize()), branchPredictor.getInitialFsmState());
+            branchPredictor.localFSMs[entry] = std::vector<StateOfFSM>(PowerOfTwo(branchPredictor.getHistVecSize()), branchPredictor.getInitialFsmState());
         }
         if (taken){
             branchPredictor.localFSMs[entry][branchPredictor.getGlobalHistoryVec()] =
@@ -268,14 +269,14 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
                     ? SNT :(StateOfFSM)(((int)branchPredictor.localFSMs[entry][branchPredictor.getGlobalHistoryVec()])-1);}
 
         // shift left the history vector
-        branchPredictor.setGlobalHistoryVec(branchPredictor.getGlobalHistoryVec() << 1) % PowerOfTwo(branchPredictor.getHistVecSize());
+        branchPredictor.setGlobalHistoryVec((branchPredictor.getGlobalHistoryVec() << 1) % PowerOfTwo(branchPredictor.getHistVecSize()));
         // if taken , insert 1 from the right
-        if (taken) branchPredictor.setGlobalHistoryVec(branchPredictor.getGlobalHistoryVec()++);
+        if (taken) branchPredictor.setGlobalHistoryVec(branchPredictor.getGlobalHistoryVec()+1);
     }
     // local history vector and local tables
     if(!branchPredictor.isGlobalHistory() && !(branchPredictor.isGlobalTable())){
         if (tag != branchPredictor.tags[entry]){
-            branchPredictor.localFSMs[entry] = vector<StateOfFSM>(PowerOfTwo(branchPredictor.getHistVecSize()), branchPredictor.getInitialFsmState());
+            branchPredictor.localFSMs[entry] = std::vector<StateOfFSM>(PowerOfTwo(branchPredictor.getHistVecSize()), branchPredictor.getInitialFsmState());
             branchPredictor.localHistories[entry] = 0;
             branchPredictor.tags[entry] = tag;
         }
@@ -290,7 +291,7 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
                     ? SNT :(StateOfFSM)(((int)branchPredictor.localFSMs[entry][branchPredictor.localHistories[entry]])-1);}
 
         // shift left the history vector
-        branchPredictor.localHistories[entry] = (branchPredictor.localHistories[entry] << 1) % PowerOfTwo(branchPredictor.getHistVecSize();
+        branchPredictor.localHistories[entry] = (branchPredictor.localHistories[entry] << 1) % PowerOfTwo(branchPredictor.getHistVecSize());
         // if taken , insert 1 from the right
         if (taken) branchPredictor.localHistories[entry]++;
 
@@ -318,7 +319,7 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
             branchPredictor.GlobalFSM[sharerHelper ^ branchPredictor.localHistories[entry]] =
                     (branchPredictor.GlobalFSM[sharerHelper ^ branchPredictor.localHistories[entry]] == SNT)
                     ? SNT :(StateOfFSM)(((int)branchPredictor.GlobalFSM[sharerHelper ^ branchPredictor.localHistories[entry]])-1);}
-        branchPredictor.localHistories[entry] = (branchPredictor.localHistories[entry] << 1) % PowerOfTwo(branchPredictor.getHistVecSize();
+        branchPredictor.localHistories[entry] = (branchPredictor.localHistories[entry] << 1) % PowerOfTwo(branchPredictor.getHistVecSize());
         // if taken , insert 1 from the right
         if (taken) branchPredictor.localHistories[entry]++;
     }
